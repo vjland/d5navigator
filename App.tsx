@@ -116,7 +116,8 @@ const App: React.FC = () => {
       {/* HEADER */}
       <header className="flex-none h-16 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-4 z-30 relative shadow-md">
         <div className="flex items-center space-x-3">
-          <h1 className="text-lg font-bold tracking-tight text-zinc-400 hidden sm:block">D5 Navigator</h1>
+          <img src="logo.svg" alt="D5 Logo" className="w-8 h-8 rounded-lg shadow-inner" />
+          <h1 className="text-lg font-bold tracking-tight text-zinc-300 hidden sm:block">D5 Navigator</h1>
         </div>
 
         {/* Center Indicator */}
