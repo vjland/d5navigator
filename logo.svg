@@ -1,13 +1,39 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="32" height="32" rx="8" fill="white"/>
-  
-  <rect x="4" y="4" width="24" height="24" rx="4" fill="#000000" fill-opacity="0.05"/>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a2a6c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f0c29;stop-opacity:1" />
+    </linearGradient>
+  </defs>
 
-  <path d="M6 24L12 16L18 20L26 8" stroke="#34A853" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  
-  <rect x="8" y="10" width="10" height="14" rx="1.5" transform="rotate(-12 8 10)" fill="#4285F4"/>
-  
-  <rect x="14" y="8" width="10" height="14" rx="1.5" transform="rotate(8 14 8)" fill="#EA4335"/>
-  
-  <circle cx="21" cy="12" r="1.5" fill="#FBBC05"/>
+  <path d="M100 20 
+           C 100 20, 150 25, 170 45 
+           C 175 95, 160 145, 100 180 
+           C 40 145, 25 95, 30 45 
+           C 50 25, 100 20, 100 20 Z" 
+        fill="url(#shieldGrad)" 
+        stroke="#4fc3f7" 
+        stroke-width="4" 
+        stroke-linejoin="round"/>
+
+  <path d="M100 30 
+           C 100 30, 140 35, 158 52 
+           C 162 92, 150 135, 100 165 
+           C 50 135, 38 92, 42 52 
+           C 60 35, 100 30, 100 30 Z" 
+        fill="none" 
+        stroke="#4fc3f7" 
+        stroke-width="1" 
+        opacity="0.5"/>
+
+  <text x="50%" y="55%" 
+        dominant-baseline="middle" 
+        text-anchor="middle" 
+        fill="#ffffff" 
+        font-family="Arial, sans-serif" 
+        font-weight="bold" 
+        font-size="50"
+        style="filter: drop-shadow(0px 0px 5px #4fc3f7);">
+    D5
+  </text>
 </svg>
