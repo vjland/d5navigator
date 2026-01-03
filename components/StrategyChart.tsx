@@ -15,7 +15,7 @@ const StrategyChart: React.FC<StrategyChartProps> = ({ hands }) => {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-          <ReferenceLine y={0} stroke="#52525b" strokeDasharray="3 3" />
+          <ReferenceLine y={0} stroke="#002455" strokeWidth={2} />
           <XAxis 
             dataKey="id" 
             hide={true} 
@@ -40,9 +40,9 @@ const StrategyChart: React.FC<StrategyChartProps> = ({ hands }) => {
             type="monotone" 
             dataKey="runningTotal" 
             stroke="#fbbf24" 
-            strokeWidth={3} 
-            dot={false}
-            activeDot={{ r: 6, fill: '#fbbf24', stroke: '#18181b', strokeWidth: 2 }}
+            strokeWidth={1} 
+            dot={{ r: 1, fill: '#fbbf24', strokeWidth: 0 }}
+            activeDot={{ r: 4, fill: '#fbbf24', stroke: '#18181b', strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </LineChart>
