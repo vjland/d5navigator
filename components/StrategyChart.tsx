@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts';
 import { Hand } from '../types';
 
 interface StrategyChartProps {
@@ -28,21 +29,13 @@ const StrategyChart: React.FC<StrategyChartProps> = ({ hands }) => {
             tickLine={false}
             axisLine={false}
           />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '6px', color: '#e4e4e7' }}
-            itemStyle={{ color: '#fbbf24' }}
-            labelStyle={{ color: '#a1a1aa', marginBottom: '0.25rem' }}
-            formatter={(value: number) => [`${value > 0 ? '+' : ''}${value}`, 'Total Units']}
-            labelFormatter={(label) => `Hand #${label}`}
-            cursor={{ stroke: '#fbbf24', strokeWidth: 1, opacity: 0.5 }}
-          />
           <Line 
-            type="monotone" 
+            type="linear" 
             dataKey="runningTotal" 
             stroke="#fbbf24" 
             strokeWidth={1} 
             dot={{ r: 1, fill: '#fbbf24', strokeWidth: 0 }}
-            activeDot={{ r: 4, fill: '#fbbf24', stroke: '#18181b', strokeWidth: 2 }}
+            activeDot={false}
             isAnimationActive={false}
           />
         </LineChart>

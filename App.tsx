@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { RefreshCw, Menu } from 'lucide-react';
+
+import React, { useState } from 'react';
+import { RefreshCw, Menu, Download } from 'lucide-react';
 import StrategyChart from './components/StrategyChart';
 import Keypad from './components/Keypad';
 import HistoryList from './components/HistoryList';
@@ -86,6 +87,55 @@ const App: React.FC = () => {
     setIsResetModalOpen(false);
   };
 
+  const handleDownloadChart = () => {
+    const chartSvg = document.querySelector('.recharts-surface') as SVGElement;
+    if (!chartSvg) return;
+
+    // Clone to manipulate without affecting live UI
+    const svgClone = chartSvg.cloneNode(true) as SVGElement;
+    const svgSize = chartSvg.getBoundingClientRect();
+    
+    // Explicitly set dimensions on the clone for canvas rendering
+    svgClone.setAttribute('width', svgSize.width.toString());
+    svgClone.setAttribute('height', svgSize.height.toString());
+    svgClone.setAttribute('viewBox', `0 0 ${svgSize.width} ${svgSize.height}`);
+
+    const svgData = new XMLSerializer().serializeToString(svgClone);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    // Scale up for better quality
+    const scale = window.devicePixelRatio || 2;
+    canvas.width = svgSize.width * scale;
+    canvas.height = svgSize.height * scale;
+    
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+
+    img.onload = () => {
+      if (!ctx) return;
+      ctx.scale(scale, scale);
+      
+      // Fill background to match app aesthetic
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(0, 0, svgSize.width, svgSize.height);
+      
+      // Draw the limited chart area
+      ctx.drawImage(img, 0, 0, svgSize.width, svgSize.height);
+      
+      const pngUrl = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = pngUrl;
+      downloadLink.download = `d5-navigator-chart-${new Date().getTime()}.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+
   // -- Render Helpers --
 
   const getNextBetIndicator = () => {
@@ -127,7 +177,15 @@ const App: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-1 sm:space-x-3">
+          <button 
+            onClick={handleDownloadChart}
+            disabled={hands.length === 0}
+            className={`p-2 rounded-lg transition-colors ${hands.length === 0 ? 'text-zinc-700 cursor-not-allowed' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+            title="Download Chart"
+          >
+            <Download className="w-5 h-5" />
+          </button>
           <button 
             onClick={() => setIsResetModalOpen(true)}
             className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
