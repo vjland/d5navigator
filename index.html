@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>D5 Navigator</title>
+    <title>D5 Navigator Pro</title>
     <link rel="icon" type="image/svg+xml" href="logo.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -14,130 +14,536 @@
             touch-action: manipulation; 
             -webkit-tap-highlight-color: transparent; 
         }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        
+        /* Custom scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 2px; }
 
-        .fade-in { animation: fadeIn 0.2s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        .slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        /* Floating History Drawer - Forced Fixed Position */
+        #history-section {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            z-index: 100;
+            transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: height;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+        }
+        #history-section.is-expanded {
+            height: 75vh !important;
+        }
 
+        /* Top-Right Keypad Panel */
+        #keypad-modal {
+            position: fixed;
+            top: 4.25rem;
+            right: 1rem;
+            width: 260px;
+            z-index: 200;
+            transform-origin: top right;
+        }
+
+        .fade-in { animation: fadeIn 0.15s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        /* Sharp chart animation */
         .chart-path {
             stroke-dasharray: 2000;
             stroke-dashoffset: 2000;
-            animation: dash 1.5s linear forwards;
+            animation: dash 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
         @keyframes dash { to { stroke-dashoffset: 0; } }
+
+        /* Button interaction */
+        .key-btn:active { transform: scale(0.92); background-color: #27272a; }
+        
+        /* UI Shadows */
+        .glass-shadow { box-shadow: 0 10px 30px -10px rgba(0,0,0,0.7); }
+
+        /* Confirmation animation */
+        .confirm-slide {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0"
-  }
-}
-</script>
 </head>
 <body class="flex flex-col h-screen overflow-hidden select-none">
 
     <!-- HEADER -->
-    <header class="flex-none h-16 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-4 z-30 relative shadow-md">
+    <header class="flex-none h-16 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-4 z-[150] relative shadow-md">
         <div class="flex items-center space-x-3">
-            <img src="logo.svg" alt="D5 Logo" class="w-8 h-8 rounded-lg shadow-inner">
-            <h1 class="text-lg font-bold tracking-tight text-zinc-300 hidden sm:block">D5 Navigator</h1>
+            <div class="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center border border-zinc-700 shadow-inner">
+                <span class="text-xs font-bold text-amber-500">D5</span>
+            </div>
+            <h1 class="text-lg font-bold tracking-tight text-zinc-300 hidden sm:block">Navigator</h1>
         </div>
 
-        <!-- Next Bet Indicator (Centered) -->
+        <!-- Next Bet Indicator -->
         <div class="flex items-center space-x-3 absolute left-1/2 transform -translate-x-1/2">
-            <span class="text-zinc-500 text-xs font-bold uppercase tracking-wider hidden sm:block">Next:</span>
-            <div id="next-bet-indicator" class="flex items-center justify-center w-12 h-12 rounded-xl border-2 shadow-lg transition-all duration-300 bg-zinc-800/50 border-zinc-700 text-zinc-700">
-                <span id="next-bet-text" class="text-2xl font-black">-</span>
+            <div id="next-bet-indicator" class="flex items-center justify-center w-11 h-11 rounded-xl border-2 shadow-lg transition-all duration-300 bg-zinc-800/50 border-zinc-700 text-zinc-600">
+                <span id="next-bet-text" class="text-xl font-black">-</span>
             </div>
         </div>
 
-        <div class="flex items-center space-x-1 sm:space-x-3">
-            <button id="download-btn" class="p-2 text-zinc-700 cursor-not-allowed rounded-lg transition-colors" title="Download Chart">
+        <div class="flex items-center space-x-1 relative">
+            <button id="download-chart-btn" class="p-2 text-zinc-500 hover:text-white transition-colors" title="Export Report">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </button>
-            <button id="reset-trigger-btn" class="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors" title="Reset Game">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-            </button>
-            <button id="menu-btn" class="p-2 rounded-lg transition-all active:scale-95 text-zinc-500 hover:text-white hover:bg-zinc-800">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+            
+            <div id="reset-wrapper" class="relative flex items-center">
+                <button id="reset-btn" class="p-2 text-zinc-500 hover:text-rose-500 transition-colors" title="Start New Game">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                </button>
+                
+                <!-- Inline Confirmation UI -->
+                <div id="reset-confirm-ui" class="hidden absolute right-0 flex items-center bg-zinc-900 border border-zinc-700 rounded-lg p-1.5 shadow-2xl space-x-2 whitespace-nowrap z-[160]">
+                    <span class="text-[10px] font-bold text-zinc-400 px-1">Start new game?</span>
+                    <button id="reset-confirm-yes" class="px-2 py-1 bg-rose-600 text-white text-[10px] font-black rounded uppercase transition-colors hover:bg-rose-500 active:scale-95">Yes</button>
+                    <button id="reset-confirm-no" class="px-2 py-1 bg-zinc-800 text-zinc-400 text-[10px] font-black rounded uppercase transition-colors hover:bg-zinc-700 active:scale-95">No</button>
+                </div>
+            </div>
+
+            <button id="open-keypad-btn" class="w-10 h-10 flex items-center justify-center bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-black text-xl transition-all active:scale-90 shadow-lg shadow-amber-900/40">
+                +
             </button>
         </div>
     </header>
 
-    <!-- MAIN CONTENT -->
-    <main class="flex-1 flex flex-col overflow-hidden relative">
-        <!-- CHART CONTAINER -->
-        <div class="flex-1 min-h-0 p-4 bg-zinc-950 relative">
-            <div id="chart-container" class="w-full h-full bg-zinc-900/50 rounded-xl border border-zinc-800 p-4 relative overflow-hidden">
+    <!-- MAIN DASHBOARD -->
+    <main class="flex-1 flex flex-col relative bg-zinc-950 overflow-hidden">
+        
+        <!-- CHART AREA -->
+        <div id="chart-view-area" class="flex-1 p-4 flex flex-col">
+            <div id="chart-container" class="flex-1 bg-zinc-900/10 rounded-2xl border border-zinc-800/40 p-4 relative overflow-hidden">
                 <svg id="main-chart" class="w-full h-full overflow-visible"></svg>
             </div>
+            <!-- Padding for the fixed pull-up -->
+            <div class="h-16 flex-none"></div>
         </div>
 
-        <!-- HISTORY SECTION -->
-        <div id="history-container" class="flex-none h-[92px] bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 flex flex-col transition-all duration-300 ease-in-out shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.4)] z-20 overflow-hidden">
-            <div id="history-header" class="relative px-4 pt-3 pb-2 border-b border-zinc-800 bg-zinc-900 flex justify-between items-center cursor-pointer hover:bg-zinc-800/80 transition-colors group">
-                <div class="absolute top-1.5 left-1/2 -translate-x-1/2 w-8 h-1 bg-zinc-800 rounded-full group-hover:bg-zinc-700 transition-colors"></div>
-                <div class="flex items-center space-x-2 text-zinc-400 group-hover:text-zinc-300 mt-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span class="text-[10px] font-bold uppercase tracking-widest">Hand History</span>
-                    <span id="history-count" class="text-[10px] text-zinc-600 font-mono ml-1">(0)</span>
+        <!-- HISTORY SECTION (FLOATING PULL-UP) -->
+        <div id="history-section" class="bg-zinc-900/98 backdrop-blur-2xl border-t border-zinc-800 flex flex-col">
+            <!-- Handle Bar / Trigger -->
+            <div id="history-trigger" class="flex-none h-12 flex items-center justify-between px-4 cursor-pointer hover:bg-zinc-800 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-500"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="text-[11px] font-bold uppercase tracking-widest text-zinc-400">Journal History</span>
+                    <span id="hand-count" class="text-[11px] font-mono text-zinc-700">(0)</span>
                 </div>
-                <button class="text-zinc-500 group-hover:text-zinc-300 mt-1">
-                    <svg id="history-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-                </button>
+                <div class="flex items-center space-x-2">
+                    <span id="history-status-label" class="text-[9px] font-black text-zinc-600 uppercase tracking-tighter mr-2">Tap to view</span>
+                    <svg id="history-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-zinc-600 transition-transform duration-300"><path d="m18 15-6-6-6 6"/></svg>
+                </div>
             </div>
-            <div id="history-list" class="flex-1 overflow-hidden p-1 space-y-1 custom-scroll">
-                <div class="text-center text-zinc-600 py-4 text-[10px] italic">Waiting for first hand...</div>
+            <!-- Scrollable List Content -->
+            <div id="history-list" class="flex-1 overflow-hidden p-3 space-y-2 custom-scroll bg-zinc-950/20">
+                <div class="flex items-center justify-center h-full opacity-10 italic text-[10px] tracking-widest uppercase text-center">No Data Recorded</div>
             </div>
         </div>
     </main>
 
-    <!-- KEYPAD OVERLAY -->
-    <div id="keypad-backdrop" class="hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"></div>
-    <div id="keypad-panel" class="hidden fixed top-20 right-2 sm:right-4 z-50 w-full max-w-[340px] bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl flex-col overflow-hidden fade-in">
-        <div class="flex justify-between items-center p-3 border-b border-zinc-800 bg-zinc-800/50">
-            <h2 class="text-sm font-bold text-zinc-300 uppercase tracking-wider">Input Result</h2>
-            <button id="close-keypad-btn" class="p-1.5 hover:bg-zinc-700 rounded-full transition-colors text-zinc-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    <!-- KEYPAD OVERLAY (TOP-RIGHT PANEL) -->
+    <div id="overlay-backdrop" class="hidden fixed inset-0 z-[180] bg-black/60 backdrop-blur-sm"></div>
+    <div id="keypad-modal" class="hidden flex flex-col bg-zinc-900 border border-zinc-700 rounded-2xl glass-shadow overflow-hidden fade-in">
+        <div class="p-3 border-b border-zinc-800 flex justify-between items-center bg-zinc-800/20">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Quick Input</span>
+            <button id="close-keypad" class="text-zinc-500 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
-        <div class="bg-zinc-950 p-8 flex justify-center items-center border-b border-zinc-800">
-            <div class="flex items-center space-x-12 text-5xl font-mono">
-                <span id="p-score" class="font-bold text-zinc-700">0</span>
-                <span class="text-zinc-700 font-thin">:</span>
-                <span id="b-score" class="font-bold text-zinc-700">0</span>
+        
+        <!-- Score Display -->
+        <div class="py-6 flex justify-center items-center bg-zinc-950/40 border-b border-zinc-800/50">
+            <div class="flex items-center space-x-6 text-5xl font-mono">
+                <span id="kp-p-score" class="font-bold text-zinc-700">0</span>
+                <span class="text-zinc-800 opacity-30">:</span>
+                <span id="kp-b-score" class="font-bold text-zinc-700">0</span>
             </div>
         </div>
-        <div id="keypad-buttons" class="p-3 grid grid-cols-3 gap-2 bg-zinc-900">
-            <!-- Buttons dynamically generated in index.tsx -->
+
+        <div class="p-3 grid grid-cols-3 gap-2 bg-zinc-900">
+            <button data-key="1" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">1</button>
+            <button data-key="2" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">2</button>
+            <button data-key="3" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">3</button>
+            <button data-key="4" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">4</button>
+            <button data-key="5" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">5</button>
+            <button data-key="6" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">6</button>
+            <button data-key="7" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">7</button>
+            <button data-key="8" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">8</button>
+            <button data-key="9" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">9</button>
+            <button id="kp-back" class="key-btn h-12 flex items-center justify-center bg-zinc-800/40 rounded-xl text-rose-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            </button>
+            <button data-key="0" class="key-btn h-12 text-xl font-bold bg-zinc-800 rounded-xl text-zinc-300 border border-zinc-700/50">0</button>
+            <button id="kp-submit" disabled class="h-12 flex items-center justify-center bg-zinc-800/30 rounded-xl text-zinc-600 cursor-not-allowed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
         </div>
     </div>
 
-    <!-- RESET MODAL -->
-    <div id="reset-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm fade-in">
-        <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
-            <div class="flex items-center space-x-3 mb-4 text-amber-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-                <h3 class="text-lg font-bold text-white">Reset Game Data?</h3>
-            </div>
-            <p class="text-zinc-400 text-sm mb-6 leading-relaxed">This will clear all history and performance metrics.</p>
-            <div class="flex justify-end space-x-3">
-                <button id="cancel-reset-btn" class="px-4 py-2 rounded-lg text-sm font-medium text-zinc-300 hover:bg-zinc-800">Cancel</button>
-                <button id="confirm-reset-btn" class="px-4 py-2 rounded-lg text-sm font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-900/20">Reset</button>
-            </div>
-        </div>
-    </div>
+    <!-- APP LOGIC -->
+    <script>
+        const state = {
+            hands: [],
+            nextPrediction: null,
+            input: '',
+            historyExpanded: false
+        };
 
-    <script type="module" src="index.tsx"></script>
+        const elements = {
+            indicator: document.getElementById('next-bet-indicator'),
+            indicatorText: document.getElementById('next-bet-text'),
+            chart: document.getElementById('main-chart'),
+            chartContainer: document.getElementById('chart-container'),
+            historySection: document.getElementById('history-section'),
+            historyList: document.getElementById('history-list'),
+            historyTrigger: document.getElementById('history-trigger'),
+            historyChevron: document.getElementById('history-chevron'),
+            historyStatus: document.getElementById('history-status-label'),
+            handCount: document.getElementById('hand-count'),
+            backdrop: document.getElementById('overlay-backdrop'),
+            modal: document.getElementById('keypad-modal'),
+            kpP: document.getElementById('kp-p-score'),
+            kpB: document.getElementById('kp-b-score'),
+            kpSubmit: document.getElementById('kp-submit'),
+            downloadBtn: document.getElementById('download-chart-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            resetConfirmUI: document.getElementById('reset-confirm-ui'),
+            resetYes: document.getElementById('reset-confirm-yes'),
+            resetNo: document.getElementById('reset-confirm-no')
+        };
+
+        function init() {
+            setupEvents();
+            renderUI();
+            renderChart();
+        }
+
+        function setupEvents() {
+            document.getElementById('open-keypad-btn').onclick = () => {
+                toggleKeypad(true);
+                toggleResetConfirm(false);
+            };
+            document.getElementById('close-keypad').onclick = () => toggleKeypad(false);
+            elements.backdrop.onclick = () => toggleKeypad(false);
+
+            // History pull-up toggle
+            elements.historyTrigger.onclick = (e) => {
+                e.stopPropagation();
+                toggleHistory(!state.historyExpanded);
+            };
+
+            // Inline Reset Logic
+            elements.resetBtn.onclick = (e) => {
+                e.stopPropagation();
+                toggleResetConfirm(true);
+            };
+
+            elements.resetNo.onclick = (e) => {
+                e.stopPropagation();
+                toggleResetConfirm(false);
+            };
+
+            elements.resetYes.onclick = (e) => {
+                e.stopPropagation();
+                performReset();
+                toggleResetConfirm(false);
+            };
+
+            // Hide reset confirm if clicking anywhere else
+            document.addEventListener('click', () => {
+                toggleResetConfirm(false);
+            });
+
+            elements.downloadBtn.onclick = () => downloadChart();
+
+            document.querySelectorAll('[data-key]').forEach(btn => {
+                btn.onclick = () => {
+                    if (state.input.length < 2) {
+                        state.input += btn.dataset.key;
+                        updateKeypadDisplay();
+                    }
+                };
+            });
+
+            document.getElementById('kp-back').onclick = () => {
+                state.input = state.input.slice(0, -1);
+                updateKeypadDisplay();
+            };
+
+            elements.kpSubmit.onclick = () => {
+                if (state.input.length === 2 && state.input[0] !== state.input[1]) {
+                    processHand(parseInt(state.input[0]), parseInt(state.input[1]));
+                    toggleKeypad(false);
+                }
+            };
+
+            window.onresize = () => renderChart();
+        }
+
+        function toggleResetConfirm(show) {
+            if (show) {
+                elements.resetConfirmUI.classList.remove('hidden');
+                elements.resetConfirmUI.classList.add('fade-in');
+            } else {
+                elements.resetConfirmUI.classList.add('hidden');
+                elements.resetConfirmUI.classList.remove('fade-in');
+            }
+        }
+
+        function performReset() {
+            // Comprehensive state wipe
+            state.hands = [];
+            state.nextPrediction = null;
+            state.input = '';
+            
+            // UI Clean up
+            toggleKeypad(false);
+            toggleHistory(false);
+            
+            // Re-render everything
+            renderUI();
+            renderChart();
+        }
+
+        function toggleHistory(expanded) {
+            state.historyExpanded = expanded;
+            if (state.historyExpanded) {
+                elements.historySection.classList.add('is-expanded');
+                elements.historyChevron.style.transform = 'rotate(180deg)';
+                elements.historyStatus.innerText = 'Collapse Journal';
+                elements.historyList.classList.remove('overflow-hidden');
+                elements.historyList.classList.add('overflow-y-auto');
+            } else {
+                elements.historySection.classList.remove('is-expanded');
+                elements.historyChevron.style.transform = 'rotate(0deg)';
+                elements.historyStatus.innerText = 'Tap to view history';
+                elements.historyList.classList.remove('overflow-y-auto');
+                elements.historyList.classList.add('overflow-hidden');
+                elements.historyList.scrollTop = 0;
+            }
+        }
+
+        function toggleKeypad(show) {
+            state.input = '';
+            updateKeypadDisplay();
+            elements.modal.classList.toggle('hidden', !show);
+            elements.backdrop.classList.toggle('hidden', !show);
+        }
+
+        function updateKeypadDisplay() {
+            const v1 = state.input[0];
+            const v2 = state.input[1];
+            elements.kpP.innerText = v1 !== undefined ? v1 : '0';
+            elements.kpP.className = v1 !== undefined ? 'font-bold text-blue-500' : 'font-bold text-zinc-700';
+            elements.kpB.innerText = v2 !== undefined ? v2 : '0';
+            elements.kpB.className = v2 !== undefined ? 'font-bold text-red-500' : 'font-bold text-zinc-700';
+
+            const ready = state.input.length === 2;
+            const tie = ready && v1 === v2;
+            
+            elements.kpSubmit.disabled = !ready || tie;
+            if (ready && !tie) {
+                elements.kpSubmit.className = 'h-12 flex items-center justify-center bg-emerald-600 text-white rounded-xl shadow-lg active:scale-95 transition-all';
+                elements.kpSubmit.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            } else {
+                elements.kpSubmit.className = 'h-12 flex items-center justify-center bg-zinc-800/30 rounded-xl text-zinc-600 cursor-not-allowed';
+                elements.kpSubmit.innerHTML = tie ? '<span class="text-[9px] font-black text-rose-500">NO TIE</span>' : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+            }
+        }
+
+        function processHand(p, b) {
+            const winner = p > b ? 'Player' : 'Banker';
+            const delta = Math.abs(p - b);
+            const prevTotal = state.hands.length > 0 ? state.hands[state.hands.length - 1].runningTotal : 0;
+            
+            let result = 'PUSH';
+            let change = 0;
+            if (state.nextPrediction) {
+                if (winner === state.nextPrediction) {
+                    result = 'WIN';
+                    change = 1;
+                } else {
+                    result = 'LOSS';
+                    change = -1;
+                }
+            }
+
+            const strat = delta >= 5 ? winner : (winner === 'Player' ? 'Banker' : 'Player');
+
+            state.hands.push({
+                id: state.hands.length + 1,
+                p, b, winner, delta,
+                prediction: state.nextPrediction,
+                result,
+                runningTotal: prevTotal + change
+            });
+
+            state.nextPrediction = strat;
+            renderUI();
+            renderChart();
+        }
+
+        function renderUI() {
+            if (!state.nextPrediction) {
+                elements.indicator.className = 'flex items-center justify-center w-11 h-11 rounded-xl border-2 bg-zinc-800/50 border-zinc-700 text-zinc-700';
+                elements.indicatorText.innerText = '-';
+            } else if (state.nextPrediction === 'Player') {
+                elements.indicator.className = 'flex items-center justify-center w-11 h-11 rounded-xl border-2 border-blue-500 bg-blue-500/10 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]';
+                elements.indicatorText.innerText = 'P';
+            } else {
+                elements.indicator.className = 'flex items-center justify-center w-11 h-11 rounded-xl border-2 border-red-500 bg-red-500/10 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]';
+                elements.indicatorText.innerText = 'B';
+            }
+
+            elements.handCount.innerText = `(${state.hands.length})`;
+            if (state.hands.length === 0) {
+                elements.historyList.innerHTML = '<div class="flex items-center justify-center h-full opacity-10 italic text-[10px] tracking-widest uppercase text-center">No Data Recorded</div>';
+            } else {
+                elements.historyList.innerHTML = [...state.hands].reverse().map(h => `
+                    <div class="grid grid-cols-12 gap-2 items-center p-3 rounded-xl bg-zinc-900/50 text-[12px] border border-zinc-800/50 shadow-sm animate-fadeIn">
+                        <div class="col-span-1 text-zinc-600 font-mono text-[9px]">#${h.id}</div>
+                        <div class="col-span-4 flex items-center space-x-2">
+                            <span class="${h.winner === 'Player' ? 'text-blue-500' : 'text-zinc-500'} font-bold">P:${h.p}</span>
+                            <span class="text-zinc-800 opacity-20">|</span>
+                            <span class="${h.winner === 'Banker' ? 'text-red-500' : 'text-zinc-500'} font-bold">B:${h.b}</span>
+                        </div>
+                        <div class="col-span-3 flex justify-center">
+                            ${h.prediction ? `
+                                <span class="text-[9px] uppercase font-bold px-2 py-0.5 rounded-full ${h.prediction === 'Player' ? 'bg-blue-900/40 text-blue-400' : 'bg-red-900/40 text-red-400'}">
+                                    ${h.prediction[0]}
+                                </span>
+                            ` : '<span class="text-zinc-800">-</span>'}
+                        </div>
+                        <div class="col-span-2 font-black ${h.result === 'WIN' ? 'text-emerald-500' : h.result === 'LOSS' ? 'text-rose-500' : 'text-zinc-600'}">
+                            ${h.result}
+                        </div>
+                        <div class="col-span-2 text-right font-mono font-bold ${h.runningTotal > 0 ? 'text-emerald-400' : h.runningTotal < 0 ? 'text-rose-400' : 'text-zinc-500'}">
+                            ${h.runningTotal > 0 ? '+' : ''}${h.runningTotal}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderChart() {
+            const container = elements.chartContainer;
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            const svg = elements.chart;
+            if (!w || !h) return;
+
+            const paddingLeft = 40;
+            const paddingRight = 15;
+            const paddingTop = 20;
+            const paddingBottom = 20;
+            const drawW = w - paddingLeft - paddingRight;
+            const drawH = h - paddingTop - paddingBottom;
+
+            svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+            svg.innerHTML = '';
+
+            const xMax = Math.max(80, state.hands.length + 10);
+            const yMin = -20;
+            const yMax = 20;
+            const yRange = yMax - yMin;
+
+            const getX = (id) => paddingLeft + (id / xMax) * drawW;
+            const getY = (v) => paddingTop + drawH - ((v - yMin) / yRange) * drawH;
+
+            // Grid
+            for (let i = yMin; i <= yMax; i += 5) {
+                const py = getY(i);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', paddingLeft); 
+                line.setAttribute('y1', py); 
+                line.setAttribute('x2', paddingLeft + drawW); 
+                line.setAttribute('y2', py);
+                line.setAttribute('stroke', i === 0 ? '#52525b' : '#18181b');
+                line.setAttribute('stroke-width', i === 0 ? '2' : '1');
+                if (i !== 0) line.setAttribute('stroke-dasharray', '4 4');
+                svg.appendChild(line);
+
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', paddingLeft - 10); 
+                label.setAttribute('y', py + 4);
+                label.setAttribute('fill', i === 0 ? '#d4d4d8' : '#3f3f46'); 
+                label.setAttribute('font-size', '10');
+                label.setAttribute('text-anchor', 'end'); 
+                label.setAttribute('font-family', 'ui-monospace, monospace');
+                label.textContent = i;
+                svg.appendChild(label);
+            }
+
+            if (state.hands.length > 0) {
+                let pathD = `M ${getX(0)} ${getY(0)}`;
+                state.hands.forEach(hand => {
+                    pathD += ` L ${getX(hand.id)} ${getY(hand.runningTotal)}`;
+                });
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathD);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', '#fbbf24');
+                path.setAttribute('stroke-width', '2.5');
+                path.setAttribute('stroke-linejoin', 'round');
+                path.setAttribute('class', 'chart-path');
+                svg.appendChild(path);
+
+                state.hands.forEach(hand => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', getX(hand.id));
+                    circle.setAttribute('cy', getY(hand.runningTotal));
+                    circle.setAttribute('r', '1.25');
+                    circle.setAttribute('fill', '#ffffff');
+                    svg.appendChild(circle);
+                });
+            }
+        }
+
+        function downloadChart() {
+            const svg = elements.chart;
+            const container = elements.chartContainer;
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+
+            const scale = 3; 
+            const canvas = document.createElement('canvas');
+            canvas.width = w * scale;
+            canvas.height = h * scale;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#09090b'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const clone = svg.cloneNode(true);
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            clone.setAttribute('width', w);
+            clone.setAttribute('height', h);
+            
+            const serializer = new XMLSerializer();
+            const source = serializer.serializeToString(clone);
+            const svgBlob = new Blob([source], {type: 'image/svg+xml;charset=utf-8'});
+            const url = URL.createObjectURL(svgBlob);
+            
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const pngUrl = canvas.toDataURL("image/png");
+                const link = document.createElement("a");
+                link.href = pngUrl;
+                link.download = `navigator-report-${Date.now()}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        }
+
+        init();
+    </script>
 </body>
 </html>
