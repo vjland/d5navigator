@@ -68,6 +68,7 @@
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
     </style>
+<link rel="stylesheet" href="/index.css">
 </head>
 <body class="flex flex-col h-screen overflow-hidden select-none">
 
@@ -494,6 +495,30 @@
                 path.setAttribute('class', 'chart-path');
                 svg.appendChild(path);
 
+                if (state.hands.length >= 5) {
+                    let maPathD = '';
+                    for (let i = 4; i < state.hands.length; i++) {
+                        let sum = 0;
+                        for (let j = i - 4; j <= i; j++) {
+                            sum += state.hands[j].runningTotal;
+                        }
+                        const ma = sum / 5;
+                        if (i === 4) {
+                            maPathD += `M ${getX(state.hands[i].id)} ${getY(ma)}`;
+                        } else {
+                            maPathD += ` L ${getX(state.hands[i].id)} ${getY(ma)}`;
+                        }
+                    }
+                    const maPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    maPath.setAttribute('d', maPathD);
+                    maPath.setAttribute('fill', 'none');
+                    maPath.setAttribute('stroke', '#3b82f6');
+                    maPath.setAttribute('stroke-width', '1.5');
+                    maPath.setAttribute('stroke-linejoin', 'round');
+                    maPath.setAttribute('class', 'chart-path');
+                    svg.appendChild(maPath);
+                }
+
                 state.hands.forEach(hand => {
                     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                     circle.setAttribute('cx', getX(hand.id));
@@ -547,5 +572,6 @@
 
         init();
     </script>
+<script type="module" src="/index.tsx"></script>
 </body>
 </html>
